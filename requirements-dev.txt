@@ -1,0 +1,10 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# pacman-bteng — development requirements (tests + linting)
+#
+#   ./run.sh test                        # installs these, then runs pytest
+#   pip install -r requirements-dev.txt
+# ═══════════════════════════════════════════════════════════════════════════
+
+-r requirements.txt
+
+pytest>=7.4

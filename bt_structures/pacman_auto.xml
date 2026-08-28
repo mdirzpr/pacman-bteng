@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ===========================================================================
+  PAC-MAN AUTOPILOT  (run with ./run.sh auto))
+  ===========================================================================
+  The same node library that drives the ghosts, pointed the other way. Useful
+  for three things: watching the whole game play itself, load-testing five
+  trees on one ZMQ stream, and proving that the library is not secretly
+  ghost-shaped.
+
+  PRIORITY ORDER (top wins; ReactiveFallback re-checks every guard each tick)
+    1  Hunt      power pellet burning and something edible nearby, so go eat it
+    2  Evade     a hostile ghost inside 5 tiles, so project an escape point
+    3  Collect   the default: walk to the nearest pellet by corridor distance
+    4  Wander    safety net; boxed in, keep moving rather than stand still
+
+  WHY THE ORDER IS THIS WAY
+  Hunt sits above Evade on purpose: while a power pellet is active the ghosts
+  worth avoiding are the ones already eaten or still in the pen, and Evade only
+  counts hostile ghosts anyway, so the two guards cannot both be true about the
+  same ghost. Collect last means "nothing is happening, so make progress".
+
+  Pac-Man is allowed to reverse (allow_reverse="true") everywhere. A player can
+  turn on the spot, so an autopilot that could not would be playing a harder
+  game than the human it replaces.
+
+  Node names are prefixed "Pacman/" to keep the shared event stream readable.
+  ===========================================================================
+-->
+<BTEng format_version="1.0" main_tree_to_execute="PacmanBrain">
+
+  <Tree ID="PacmanBrain">
+    <ReactiveFallback name="Pacman/Brain">
+
+      <!-- 1. A power pellet is burning and there is something edible in reach.
+              BFS, because a ghost is a moving target and a greedy step that
+              walks into a wall wastes the whole fright timer. -->
+      <Sequence name="Pacman/Hunt">
+        <IsPowerActive name="Pacman/PowerBurning"/>
+        <IsGhostWithin name="Pacman/PreyNearby" distance="14" metric="path"
+                       hostile_only="false" edible_only="true"/>
+        <SetHuntGhostTarget name="Pacman/AimAtPrey"
+                            target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Pacman/StepToPrey"
+                          target_x="{target_x}" target_y="{target_y}"
+                          pathfinder="bfs" allow_reverse="true"/>
+      </Sequence>
+
+      <!-- 2. Something hostile is close. Project a point straight away from it
+              and step greedily: fleeing is about direction, not about a route,
+              and a BFS here would happily path around a corner into a wall of
+              ghost. -->
+      <Sequence name="Pacman/Evade">
+        <IsGhostWithin name="Pacman/ThreatNearby" distance="7" metric="path"
+                       hostile_only="true"/>
+        <SetEscapeTarget name="Pacman/AimAway" openness="0.6"
+                         target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Pacman/StepAway"
+                          target_x="{target_x}" target_y="{target_y}"
+                          pathfinder="greedy" allow_reverse="true"/>
+      </Sequence>
+
+      <!-- 3. The job. candidates="12" ranks the twelve nearest pellets by sight
+              and then measures each with a BFS, because the pellet across the
+              wall is two tiles away and thirty tiles of walking. -->
+      <Sequence name="Pacman/Collect">
+        <HasPelletsLeft name="Pacman/BoardNotClear"/>
+        <SetNearestPelletTarget name="Pacman/AimAtPellet" candidates="12"
+                                target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Pacman/StepToPellet"
+                          target_x="{target_x}" target_y="{target_y}"
+                          pathfinder="bfs" allow_reverse="true"/>
+      </Sequence>
+
+      <!-- 4. Board cleared mid-frame, or genuinely boxed in. -->
+      <WanderStep name="Pacman/Wander" allow_reverse="true"/>
+
+    </ReactiveFallback>
+  </Tree>
+
+  <TreeNodesModel>
+    <Condition ID="IsPowerActive"/>
+
+    <Condition ID="IsGhostWithin">
+      <input_port name="distance"/>
+      <input_port name="hostile_only"/>
+      <input_port name="edible_only"/>
+      <input_port name="metric"/>
+    </Condition>
+
+    <Condition ID="HasPelletsLeft"/>
+
+    <Action ID="SetHuntGhostTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+    </Action>
+
+    <Action ID="SetEscapeTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="openness"/>
+    </Action>
+
+    <Action ID="SetNearestPelletTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="candidates"/>
+    </Action>
+
+    <Action ID="StepTowardTarget">
+      <input_port name="allow_reverse"/>
+      <input_port name="target_x"/>
+      <input_port name="target_y"/>
+      <input_port name="pathfinder"/>
+    </Action>
+
+    <Action ID="WanderStep">
+      <input_port name="allow_reverse"/>
+    </Action>
+  </TreeNodesModel>
+
+</BTEng>

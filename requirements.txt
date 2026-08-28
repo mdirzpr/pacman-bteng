@@ -1,0 +1,14 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# pacman-bteng — runtime requirements
+#
+#   ./run.sh setup                 # creates .venv and installs these
+#   pip install -r requirements.txt
+#
+# Everything runs on the host in a single virtualenv: there is no ROS 2 and no
+# Docker in this project — just Python, BTEng and a pygame window.
+# ═══════════════════════════════════════════════════════════════════════════
+
+bteng[zmq]>=0.3.2      # behavior-tree engine + ZmqPublisher live stream
+pygame>=2.5            # GUI: window, rendering, keyboard input
+PyYAML>=6.0            # config/game.yaml loading
+rich>=13               # tools/bt_tree_viewer.py live terminal tree view

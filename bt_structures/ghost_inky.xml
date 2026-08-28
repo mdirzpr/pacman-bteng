@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ===========================================================================
+  INKY  "Bashful".  The flanker.                (BTEng XML format)
+  ===========================================================================
+  Personality in one node: <SetFlankTarget partner="blinky"/> takes the vector
+  from Blinky to a point two tiles ahead of Pac-Man and DOUBLES it.  The result
+  swings wildly and is the most interesting target in the game: while Blinky is
+  far away Inky drifts almost aimlessly, but the moment Blinky closes in, the
+  doubled vector lands on the far side of Pac-Man and the two of them close a
+  trap from both ends.
+
+  Point partner= at another ghost to re-anchor him; with no partner on the
+  board he falls back to chasing directly rather than freezing.
+
+  PRIORITY ORDER (top wins; ReactiveFallback re-checks every guard each tick)
+    1  ReturnHome   eaten, so the eyes take the shortest path back to the pen
+    2  ExitHouse    penned, or squeezing out through the door
+    3  Flee         a power pellet is active, so run away from Pac-Man
+    4  Scatter      scatter phase, so retreat to bottom-right corner
+    5  Chase        the default, and the branch that carries the personality
+    6  Wander       safety net; a ghost that can do nothing else keeps moving
+
+  Every branch is <guard, pick a target, take one tile>.  StepTowardTarget
+  stays RUNNING for the whole tile, so the tree's live state means something in
+  ./run.sh tree, and a higher-priority guard can interrupt it mid-corridor.
+
+  Node names are prefixed "Inky/" because all four ghosts and Pac-Man stream
+  into one ZmqPublisher on tcp://*:2667, so a single filter isolates one brain.
+  ===========================================================================
+-->
+<BTEng format_version="1.0" main_tree_to_execute="InkyBrain">
+
+  <Tree ID="InkyBrain">
+    <ReactiveFallback name="Inky/Brain">
+
+      <!-- 1. Eaten: eyes only. BFS, and reversing is allowed  getting home is
+              navigation, not personality. SetHouseTarget fails on arrival,
+              which drops straight through to ExitHouse below. -->
+      <Sequence name="Inky/ReturnHome">
+        <IsEaten name="Inky/WasEaten"/>
+        <SetHouseTarget name="Inky/AimAtHouse"
+                        target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Inky/StepHome"
+                          target_x="{target_x}" target_y="{target_y}"
+                          pathfinder="bfs" allow_reverse="true"/>
+      </Sequence>
+
+      <!-- 2. In the pen: LeaveHouse holds RUNNING through the release timer and
+              the walk out, then hands the ghost back to the world. -->
+      <Sequence name="Inky/ExitHouse">
+        <IsInHouse name="Inky/Penned"/>
+        <LeaveHouse name="Inky/WalkOut"/>
+      </Sequence>
+
+      <!-- 3. Frightened: aim at a point directly away from Pac-Man and step
+              greedily toward it. Swap in <WanderStep/> for the arcade's
+              random turns. -->
+      <Sequence name="Inky/Flee">
+        <IsFrightened name="Inky/Scared"/>
+        <SetFleeTarget name="Inky/AimAway" lookahead="10"
+                       target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Inky/StepAway"
+                          target_x="{target_x}" target_y="{target_y}"
+                          pathfinder="greedy"/>
+      </Sequence>
+
+      <!-- 4. Scatter: bottom-right corner. corner_x/corner_y override the corner the
+              world assigned; drop them to use the assigned one. -->
+      <Sequence name="Inky/Scatter">
+        <IsScatterMode name="Inky/ScatterPhase"/>
+        <SetScatterTarget name="Inky/AimAtCorner" corner_x="26" corner_y="29"
+                          target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Inky/StepToCorner"
+                          target_x="{target_x}" target_y="{target_y}"/>
+      </Sequence>
+
+      <!-- 5. Chase: the one node that makes this ghost Inky. -->
+      <Sequence name="Inky/Chase">
+        <SetFlankTarget name="Inky/AimAcrossPacman" partner="blinky" lead_tiles="2"
+                        target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Inky/StepToTarget"
+                          target_x="{target_x}" target_y="{target_y}"/>
+      </Sequence>
+
+      <!-- 6. Nothing above worked (walled in by a reversal ban, say). -->
+      <WanderStep name="Inky/Wander"/>
+
+    </ReactiveFallback>
+  </Tree>
+
+  <TreeNodesModel>
+    <Condition ID="IsEaten"/>
+
+    <Condition ID="IsInHouse"/>
+
+    <Condition ID="IsFrightened"/>
+
+    <Condition ID="IsScatterMode"/>
+
+    <Condition ID="IsPacmanWithin">
+      <input_port name="distance"/>
+      <input_port name="metric"/>
+    </Condition>
+
+    <Action ID="SetHouseTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+    </Action>
+
+    <Action ID="SetFleeTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="lookahead"/>
+    </Action>
+
+    <Action ID="SetScatterTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="corner_x"/>
+      <input_port name="corner_y"/>
+    </Action>
+
+    <Action ID="SetChaseTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+    </Action>
+
+    <Action ID="SetAmbushTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="lead_tiles"/>
+    </Action>
+
+    <Action ID="SetFlankTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="partner"/>
+      <input_port name="lead_tiles"/>
+    </Action>
+
+    <Action ID="SetShyTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="flee_radius"/>
+      <input_port name="corner_x"/>
+      <input_port name="corner_y"/>
+    </Action>
+
+    <Action ID="LeaveHouse"/>
+
+    <Action ID="StepTowardTarget">
+      <input_port name="allow_reverse"/>
+      <input_port name="target_x"/>
+      <input_port name="target_y"/>
+      <input_port name="pathfinder"/>
+    </Action>
+
+    <Action ID="WanderStep">
+      <input_port name="allow_reverse"/>
+    </Action>
+  </TreeNodesModel>
+
+</BTEng>

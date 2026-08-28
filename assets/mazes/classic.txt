@@ -1,0 +1,50 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# classic.txt — the arcade Pac-Man maze, 28 columns x 31 rows.
+#
+# Lines starting with '#' in column 0 of the FILE are only comments when they
+# are outside the 31-row block below; the maze block itself is read verbatim,
+# so do not reformat it.  Every maze row must be exactly 28 characters.
+#
+# LEGEND
+#   #   wall                     X   void (outside the maze, never walkable)
+#   .   pellet (10 pts)          o   power pellet (50 pts)
+#   -   ghost-house door         (space)  empty corridor, no pellet
+#   S   Pac-Man spawn            B   Blinky spawn (outside, above the door)
+#   I   Inky spawn (in house)    P   Pinky spawn (in house)
+#   C   Clyde spawn (in house)
+#
+# Row 14 is the tunnel row: walking off the left edge re-enters on the right.
+# ═══════════════════════════════════════════════════════════════════════════
+[maze]
+############################
+#............##............#
+#.####.#####.##.#####.####.#
+#o####.#####.##.#####.####o#
+#.####.#####.##.#####.####.#
+#..........................#
+#.####.##.########.##.####.#
+#.####.##.########.##.####.#
+#......##....##....##......#
+######.##### ## #####.######
+XXXXX#.##### ## #####.#XXXXX
+XXXXX#.##    B     ##.#XXXXX
+XXXXX#.## ###--### ##.#XXXXX
+######.## #      # ##.######
+          #I P  C#          
+######.## #      # ##.######
+XXXXX#.## ######## ##.#XXXXX
+XXXXX#.##          ##.#XXXXX
+XXXXX#.## ######## ##.#XXXXX
+######.## ######## ##.######
+#............##............#
+#.####.#####.##.#####.####.#
+#.####.#####.##.#####.####.#
+#o..##.......S .......##..o#
+###.##.##.########.##.##.###
+###.##.##.########.##.##.###
+#......##....##....##......#
+#.##########.##.##########.#
+#.##########.##.##########.#
+#..........................#
+############################
+[/maze]

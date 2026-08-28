@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ===========================================================================
+  CLYDE  "Pokey".  The coward.                  (BTEng XML format)
+  ===========================================================================
+  Personality in one node: <SetShyTarget flee_radius="8"/> chases exactly like
+  Blinky while further than eight tiles away, and bolts for his own corner the
+  moment he gets closer.  He then leaves the radius, turns around, comes back,
+  and does it again  the oscillation is what reads as cowardice rather than as
+  a ghost that simply cannot aim.
+
+  He is also the reason the bottom-left of the maze is the safest place to
+  stand: shrink flee_radius to take that refuge away.
+
+  PRIORITY ORDER (top wins; ReactiveFallback re-checks every guard each tick)
+    1  ReturnHome   eaten, so the eyes take the shortest path back to the pen
+    2  ExitHouse    penned, or squeezing out through the door
+    3  Flee         a power pellet is active, so run away from Pac-Man
+    4  Scatter      scatter phase, so retreat to bottom-left corner
+    5  Chase        the default, and the branch that carries the personality
+    6  Wander       safety net; a ghost that can do nothing else keeps moving
+
+  Every branch is <guard, pick a target, take one tile>.  StepTowardTarget
+  stays RUNNING for the whole tile, so the tree's live state means something in
+  ./run.sh tree, and a higher-priority guard can interrupt it mid-corridor.
+
+  Node names are prefixed "Clyde/" because all four ghosts and Pac-Man stream
+  into one ZmqPublisher on tcp://*:2667, so a single filter isolates one brain.
+  ===========================================================================
+-->
+<BTEng format_version="1.0" main_tree_to_execute="ClydeBrain">
+
+  <Tree ID="ClydeBrain">
+    <ReactiveFallback name="Clyde/Brain">
+
+      <!-- 1. Eaten: eyes only. BFS, and reversing is allowed  getting home is
+              navigation, not personality. SetHouseTarget fails on arrival,
+              which drops straight through to ExitHouse below. -->
+      <Sequence name="Clyde/ReturnHome">
+        <IsEaten name="Clyde/WasEaten"/>
+        <SetHouseTarget name="Clyde/AimAtHouse"
+                        target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Clyde/StepHome"
+                          target_x="{target_x}" target_y="{target_y}"
+                          pathfinder="bfs" allow_reverse="true"/>
+      </Sequence>
+
+      <!-- 2. In the pen: LeaveHouse holds RUNNING through the release timer and
+              the walk out, then hands the ghost back to the world. -->
+      <Sequence name="Clyde/ExitHouse">
+        <IsInHouse name="Clyde/Penned"/>
+        <LeaveHouse name="Clyde/WalkOut"/>
+      </Sequence>
+
+      <!-- 3. Frightened: aim at a point directly away from Pac-Man and step
+              greedily toward it. Swap in <WanderStep/> for the arcade's
+              random turns. -->
+      <Sequence name="Clyde/Flee">
+        <IsFrightened name="Clyde/Scared"/>
+        <SetFleeTarget name="Clyde/AimAway" lookahead="10"
+                       target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Clyde/StepAway"
+                          target_x="{target_x}" target_y="{target_y}"
+                          pathfinder="greedy"/>
+      </Sequence>
+
+      <!-- 4. Scatter: bottom-left corner. corner_x/corner_y override the corner the
+              world assigned; drop them to use the assigned one. -->
+      <Sequence name="Clyde/Scatter">
+        <IsScatterMode name="Clyde/ScatterPhase"/>
+        <SetScatterTarget name="Clyde/AimAtCorner" corner_x="1" corner_y="29"
+                          target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Clyde/StepToCorner"
+                          target_x="{target_x}" target_y="{target_y}"/>
+      </Sequence>
+
+      <!-- 5. Chase: the one node that makes this ghost Clyde. -->
+      <Sequence name="Clyde/Chase">
+        <SetShyTarget name="Clyde/ChaseOrBolt" flee_radius="8"
+                      corner_x="1" corner_y="29"
+                      target_x="{target_x}" target_y="{target_y}"/>
+        <StepTowardTarget name="Clyde/StepToTarget"
+                          target_x="{target_x}" target_y="{target_y}"/>
+      </Sequence>
+
+      <!-- 6. Nothing above worked (walled in by a reversal ban, say). -->
+      <WanderStep name="Clyde/Wander"/>
+
+    </ReactiveFallback>
+  </Tree>
+
+  <TreeNodesModel>
+    <Condition ID="IsEaten"/>
+
+    <Condition ID="IsInHouse"/>
+
+    <Condition ID="IsFrightened"/>
+
+    <Condition ID="IsScatterMode"/>
+
+    <Condition ID="IsPacmanWithin">
+      <input_port name="distance"/>
+      <input_port name="metric"/>
+    </Condition>
+
+    <Action ID="SetHouseTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+    </Action>
+
+    <Action ID="SetFleeTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="lookahead"/>
+    </Action>
+
+    <Action ID="SetScatterTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="corner_x"/>
+      <input_port name="corner_y"/>
+    </Action>
+
+    <Action ID="SetChaseTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+    </Action>
+
+    <Action ID="SetAmbushTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="lead_tiles"/>
+    </Action>
+
+    <Action ID="SetFlankTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="partner"/>
+      <input_port name="lead_tiles"/>
+    </Action>
+
+    <Action ID="SetShyTarget">
+      <output_port name="target_x"/>
+      <output_port name="target_y"/>
+      <input_port name="flee_radius"/>
+      <input_port name="corner_x"/>
+      <input_port name="corner_y"/>
+    </Action>
+
+    <Action ID="LeaveHouse"/>
+
+    <Action ID="StepTowardTarget">
+      <input_port name="allow_reverse"/>
+      <input_port name="target_x"/>
+      <input_port name="target_y"/>
+      <input_port name="pathfinder"/>
+    </Action>
+
+    <Action ID="WanderStep">
+      <input_port name="allow_reverse"/>
+    </Action>
+  </TreeNodesModel>
+
+</BTEng>

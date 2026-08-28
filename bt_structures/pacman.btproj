@@ -1,0 +1,18 @@
+{
+  "file_format": "1.0",
+  "description": "pacman-bteng - BTEng project index. These are BTEng <BTEng> trees, not Groot2/BT.CPP files: they stream live over the BTEng ZmqPublisher on tcp://*:2667, which Groot2 cannot read. Watch them with ./run.sh tree <agent> instead.",
+  "xml_files": [
+    "ghost_blinky.xml",
+    "ghost_pinky.xml",
+    "ghost_inky.xml",
+    "ghost_clyde.xml",
+    "pacman_auto.xml"
+  ],
+  "agents": {
+    "blinky": "ghost_blinky.xml",
+    "pinky": "ghost_pinky.xml",
+    "inky": "ghost_inky.xml",
+    "clyde": "ghost_clyde.xml",
+    "pacman": "pacman_auto.xml"
+  }
+}

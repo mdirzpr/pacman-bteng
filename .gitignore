@@ -1,0 +1,26 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ── Virtualenv (created by ./run.sh setup) ───────────────────────────────────
+.venv/
+
+# ── Test / tooling caches ────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ── Local tooling ────────────────────────────────────────────────────────────
+# Vendored Claude Code skills and per-machine settings: developer tooling, not
+# part of the game.
+.claude/
+
+# ── Runtime output ───────────────────────────────────────────────────────────
+logs/
+*.jsonl

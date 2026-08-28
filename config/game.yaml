@@ -1,0 +1,88 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# pacman-bteng — game configuration
+#
+# Loaded by pacman_bteng/config.py at start-up.  Every key is optional: a
+# missing one falls back to the default in the matching dataclass, so you can
+# keep a two-line override file if you prefer.
+#
+#   python -m pacman_bteng --config config/game.yaml
+#   ./run.sh play --config config/game.yaml
+# ═══════════════════════════════════════════════════════════════════════════
+
+window:
+  tile_size: 24          # pixels per maze tile; auto-shrinks to fit the screen
+  fps: 60
+  show_panel: true       # right-hand live behavior-tree panel
+  caption: "Pac-Man · BTEng"
+  # Visual preset. "lite" is clean, crisp and cheap to draw (and the calm
+  # option if motion bothers you); "deluxe" adds neon glow, particle bursts,
+  # score popups and a CRT treatment. F3 switches between them in game.
+  visuals: lite
+
+# ── Gameplay rules ────────────────────────────────────────────────────────────
+# Speeds are in TILES PER SECOND. The maze is 28 x 31 tiles.
+rules:
+  lives: 3
+  pacman_speed: 8.0
+  ghost_speed: 7.4
+  frightened_speed: 4.8      # ghosts slow down while edible
+  eaten_speed: 16.0          # eyes race back to the house
+  tunnel_speed_factor: 0.55  # ghosts crawl through the side tunnel
+  power_duration: 7.0        # seconds of fright per power pellet
+  power_blink_lead: 2.0      # start blinking this long before it ends
+  level_speed_bonus: 0.35    # tiles/s added to everyone per level
+  max_speed: 12.0
+  ready_duration: 2.0
+  dying_duration: 1.6
+  level_clear_duration: 2.4
+
+  # How long each ghost waits in the pen at the start of a round.
+  release_delays:
+    blinky: 0.0
+    pinky: 2.0
+    inky: 6.0
+    clyde: 10.0
+
+  # The scatter/chase rhythm, in order. A negative duration means "for the rest
+  # of the level". Every switch makes the ghosts on the board reverse.
+  mode_schedule:
+    - [scatter, 7.0]
+    - [chase, 20.0]
+    - [scatter, 7.0]
+    - [chase, 20.0]
+    - [scatter, 5.0]
+    - [chase, 20.0]
+    - [scatter, 5.0]
+    - [chase, -1.0]
+
+  # Each ghost's private corner, retreated to during scatter.
+  scatter_corners:
+    blinky: [26, 1]
+    pinky: [1, 1]
+    inky: [26, 29]
+    clyde: [1, 29]
+
+  points_pellet: 10
+  points_power: 50
+  ghost_chain: [200, 400, 800, 1600]   # consecutive ghosts in one power pellet
+  extra_life_at: 10000
+
+# ── Behavior trees ────────────────────────────────────────────────────────────
+# One XML per agent, resolved relative to bt_structures/.
+behavior:
+  tick_hz: 0.0           # 0 = tick every rendered frame (recommended)
+  trees:
+    blinky: ghost_blinky.xml
+    pinky: ghost_pinky.xml
+    inky: ghost_inky.xml
+    clyde: ghost_clyde.xml
+  pacman_auto: pacman_auto.xml
+
+# ── Live introspection ────────────────────────────────────────────────────────
+# The BTEng ZmqPublisher streams every tick event as JSON on tcp://*:<port>.
+# Watch it with:  ./run.sh viewer   or   ./run.sh tree
+introspection:
+  enable_zmq: true
+  zmq_port: 2667
+  console_log: false     # colored Logger sink on stdout (very chatty)
+  log_file: null         # e.g. logs/bt_run.jsonl
