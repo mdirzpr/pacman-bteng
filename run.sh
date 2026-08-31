@@ -203,6 +203,14 @@ cmd_nodes() {
   run "$PY" -m pacman_bteng --list-nodes
 }
 
+# Regenerate docs/images/. Headless and seeded, so the images move when the
+# rendering moves and not because a different run happened to be on screen.
+cmd_shots() {
+  ensure_venv
+  step "Regenerating the screenshots in docs/images/"
+  run "$PY" tools/shots.py "$@"
+}
+
 cmd_doctor() {
   step "Checking prerequisites"
   if command -v python3 >/dev/null 2>&1; then
@@ -279,6 +287,9 @@ ${BOLD}COMMANDS${NC}
                          A bare blinky/pinky/inky/clyde/pacman means --agent <name>.
   ${GREEN}viewer${NC} [args…]       Flat live tick log (tools/bt_zmq_viewer.py).
   ${GREEN}nodes${NC}                List the registered BT node types and their ports.
+  ${GREEN}shots${NC} [name…]        Regenerate docs/images/ headlessly (lite, deluxe,
+                         debug, panel). Seeded, so the images change only when
+                         the rendering does.
   ${GREEN}doctor${NC}               Check python3, venv, requirements, display and port
                          $ZMQ_PORT — changes nothing.
   ${GREEN}clean${NC}                Remove __pycache__ / .pytest_cache (the .venv is kept).
@@ -331,6 +342,7 @@ main() {
     tree|watch)           cmd_tree "$@" ;;
     viewer|log)           cmd_viewer "$@" ;;
     nodes|list-nodes)     cmd_nodes ;;
+    shots|screenshots)    cmd_shots "$@" ;;
     doctor|check)         cmd_doctor ;;
     clean)                cmd_clean ;;
     help|-h|--help)       cmd_help ;;

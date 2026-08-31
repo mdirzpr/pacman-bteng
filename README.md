@@ -20,6 +20,18 @@ Built on:
 - 🌳 **BTEng** — the behavior-tree engine: <https://github.com/BTEng-dev/bteng> · <https://pypi.org/project/bteng/>
 - 🎮 **pygame** — the window, the sprites and the keyboard.
 
+```
+./run.sh            # play it, arrow keys
+./run.sh auto       # watch it play itself
+```
+
+![All four ghosts chasing: the panel shows each tree's branch, node and target](docs/images/lite.png)
+
+The right-hand panel is the point of the project. Every ghost there is running
+the *same* branch — `Chase` — through the *same* mover, and all four are walking
+somewhere different, because the one node above the mover is different in each
+of their four XML files.
+
 📚 **Docs:** [docs/USAGE.md](docs/USAGE.md) — install, every flag, every config
 key, the viewers, troubleshooting · [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —
 how it is built and what not to break · [docs/BEHAVIOR_TREES.md](docs/BEHAVIOR_TREES.md) —
@@ -43,8 +55,10 @@ single image file in the repository.
 
 ```bash
 ./run.sh                      # lite
-./run.sh play --visuals deluxe
+./run.sh deluxe               # deluxe
 ```
+
+![The deluxe preset: neon bloom, a power pellet burning, three ghosts fleeing](docs/images/deluxe.png)
 
 The board itself (walls, outlines, door, pellets) is pre-rendered once into a
 cached surface and re-rendered only when a pellet is eaten, which is what pays
@@ -69,6 +83,12 @@ Pinky's is `<SetAmbushTarget lead_tiles="4"/>` + the *same* `<StepTowardTarget/>
 Swap the selector and you have swapped the personality; nothing else in the
 file changes. It is the arcade's own design — a ghost's whole character is the
 tile it points at, while every ghost moves by the same rule.
+
+Press `F1` and you can watch it happen. Here the global mode has flipped to
+scatter, so every ghost has taken the same `Scatter` branch — and the one node
+inside it sends each of them to its own corner of the maze:
+
+![The F1 debug overlay: four ghosts, four scatter corners, four target lines](docs/images/debug.png)
 
 ---
 
@@ -152,6 +172,8 @@ maps and the on-screen `KEY_HINT` live side by side so they cannot drift apart.
 | `assets/mazes/classic.txt` | The 28x31 arcade maze as ASCII, with its legend in the header |
 | `tools/bt_tree_viewer.py` | Live *visual* tree view over ZMQ (needs `rich` + `pyzmq`) |
 | `tools/bt_zmq_viewer.py` | Flat live tick log over ZMQ (needs `pyzmq`) |
+| `tools/shots.py` | Regenerates the screenshots in `docs/images/`, headlessly and seeded |
+| `docs/images/` | The screenshots this README links to |
 | `tests/` | pytest target for `./run.sh test` |
 | `run.sh` | Optional one-command wrapper around all of the above |
 | `requirements.txt` / `requirements-dev.txt` | Runtime deps / deps + pytest |
@@ -190,8 +212,11 @@ repo:
 
 | Viewer | Command | What you get |
 |--------|---------|--------------|
+| In-game panel | always on (`TAB` hides it) | One card per agent: branch, active node, tick status, target |
 | Visual tree | `./run.sh tree blinky` | The tree structure parsed from the XML, recolored in place as events arrive |
 | Flat log | `./run.sh viewer --filter Blinky` | One line per node transition: name, status, duration, reason |
+
+![The behavior-tree panel: one card per agent, branch, node, status and target](docs/images/panel.png)
 
 All five trees publish onto **one** socket, so every node instance name in the
 XML carries its agent as a prefix (`Blinky/Chase`, `Pacman/Evade`) — that prefix

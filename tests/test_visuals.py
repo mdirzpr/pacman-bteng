@@ -280,3 +280,40 @@ def test_a_window_close_is_a_quit(world) -> None:
     pygame.init()
     pygame.event.post(pygame.event.Event(pygame.QUIT))
     assert InputHandler().poll(world) == [Intent.QUIT]
+
+
+# ── Documentation images ──────────────────────────────────────────────────────
+
+def test_every_readme_image_exists() -> None:
+    # A README whose images 404 on GitHub is the most visible way this repo can
+    # look broken, and it costs nothing to notice here instead of there.
+    import re
+    from pathlib import Path
+
+    from pacman_bteng.config import PROJECT_ROOT
+
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    referenced = set(re.findall(r"!\[[^\]]*\]\(([^)]+)\)", readme))
+    assert referenced, "the README should show what the game looks like"
+    for relative in referenced:
+        assert (PROJECT_ROOT / relative).is_file(), f"README links a missing {relative}"
+
+
+def test_the_shot_generator_covers_every_referenced_image() -> None:
+    # The images are only reproducible while tools/shots.py can still make each
+    # one; a shot deleted from SHOTS leaves a PNG nobody can regenerate.
+    import re
+    import sys
+    from pathlib import Path
+
+    from pacman_bteng.config import PROJECT_ROOT
+
+    sys.path.insert(0, str(PROJECT_ROOT / "tools"))
+    try:
+        import shots
+    finally:
+        sys.path.pop(0)
+
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    names = {Path(p).stem for p in re.findall(r"!\[[^\]]*\]\((docs/images/[^)]+)\)", readme)}
+    assert names <= set(shots.SHOTS), f"no shot recipe for {names - set(shots.SHOTS)}"
