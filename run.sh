@@ -112,10 +112,17 @@ port_in_use() {
 # sha256 of the file is stamped inside .venv and compared on every run. A venv
 # that predates this script simply has no stamp, so it installs once (harmless).
 ensure_requirements() {
-  local req="$1" stamp="$2" label="$3"
+  local req="$1" stamp="$2" label="$3" probe="${4:-}"
   local want have=""
   want="$(sha256sum "$req" | cut -d' ' -f1)"
   [[ -f "$stamp" ]] && have="$(cat "$stamp")"
+  # The stamp only says "this file was installed once"; if the packages were
+  # since removed (or the install was interrupted) it lies, so also try the imports.
+  if [[ -n "$probe" && "$want" == "$have" && $DRY_RUN -eq 0 ]] \
+      && ! PYGAME_HIDE_SUPPORT_PROMPT=1 "$PY" -c "$probe" >/dev/null 2>&1; then
+    warn "$label are stamped as installed but some packages are missing — reinstalling."
+    have=""
+  fi
   if [[ "$want" != "$have" ]]; then
     step "Installing $label ($(basename "$req"))"
     run "$PY" -m pip install --quiet -r "$req"
@@ -127,6 +134,12 @@ ensure_requirements() {
 }
 
 ensure_venv() {
+  # A venv made without ensurepip (or with pip removed) has no pip at all.
+  if [[ -x "$PY" && $DRY_RUN -eq 0 ]] && ! "$PY" -m pip --version >/dev/null 2>&1; then
+    warn "pip is missing from .venv — bootstrapping it with ensurepip."
+    run "$PY" -m ensurepip --upgrade \
+      || die "ensurepip failed. On Debian/Ubuntu: sudo apt install python3-venv, then rm -rf .venv"
+  fi
   if [[ ! -x "$PY" ]]; then
     step "Creating the virtualenv (.venv)"
     check_python
@@ -137,7 +150,8 @@ ensure_venv() {
     [[ $DRY_RUN -eq 1 ]] || run "$PY" -m pip install --quiet --upgrade pip
     ok "Created $VENV"
   fi
-  ensure_requirements "$REQUIREMENTS" "$REQ_STAMP" "Runtime requirements"
+  ensure_requirements "$REQUIREMENTS" "$REQ_STAMP" "Runtime requirements" \
+    "import bteng, pygame, yaml, rich, zmq"
 }
 
 ensure_dev_venv() {

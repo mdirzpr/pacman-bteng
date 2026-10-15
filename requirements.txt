@@ -9,6 +9,6 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 bteng[zmq]>=0.3.2      # behavior-tree engine + ZmqPublisher live stream
-pygame>=2.5            # GUI: window, rendering, keyboard input
+pygame-ce>=2.5         # GUI (drop-in for pygame, `import pygame`; has Python 3.14 wheels)
 PyYAML>=6.0            # config/game.yaml loading
 rich>=13               # tools/bt_tree_viewer.py live terminal tree view
