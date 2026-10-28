@@ -25,6 +25,12 @@ Built on:
 ./run.sh auto       # watch it play itself
 ```
 
+![The title card over the deluxe preset](docs/images/title.png)
+
+Opens on a title card, plays with synthesised arcade sound effects (generated at
+start-up, so there are still no asset files; `M` or `--mute` silences them), and
+uses card overlays for READY!, PAUSED and GAME OVER.
+
 ![All four ghosts chasing: the panel shows each tree's branch, node and target](docs/images/lite.png)
 
 The right-hand panel is the point of the project. Every ghost there is running
@@ -148,9 +154,12 @@ maps and the on-screen `KEY_HINT` live side by side so they cannot drift apart.
 | `SPACE` or `P` | Pause / resume |
 | `R` | Restart the run from level 1 |
 | `TAB` | Show/hide the right-hand behavior-tree panel (rebuilds the window) |
+| `1` `2` `3` | Side-panel tab: TREES / STATS / LOG (or click the dock) |
 | `F1` | Debug overlay — draws each ghost's current target and the line to it |
 | `F2` | Toggle Pac-Man's autopilot tree on/off, live |
 | `F3` | Switch between the `lite` and `deluxe` visual presets, live |
+| `M` | Mute / unmute the sound effects |
+| `ENTER` | Start from the title card (`--no-title` skips it) |
 | `ESC` or `Q` | Quit |
 
 ---
@@ -172,6 +181,7 @@ maps and the on-screen `KEY_HINT` live side by side so they cannot drift apart.
 | `assets/mazes/classic.txt` | The 28x31 arcade maze as ASCII, with its legend in the header |
 | `tools/bt_tree_viewer.py` | Live *visual* tree view over ZMQ (needs `rich` + `pyzmq`) |
 | `tools/bt_zmq_viewer.py` | Flat live tick log over ZMQ (needs `pyzmq`) |
+| `pacman_bteng/gui/audio.py` | Synthesised sound effects, one per game event |
 | `tools/shots.py` | Regenerates the screenshots in `docs/images/`, headlessly and seeded |
 | `docs/images/` | The screenshots this README links to |
 | `tests/` | pytest target for `./run.sh test` |

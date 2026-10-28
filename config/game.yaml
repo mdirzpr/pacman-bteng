@@ -18,6 +18,8 @@ window:
   # option if motion bothers you); "deluxe" adds neon glow, particle bursts,
   # score popups and a CRT treatment. F3 switches between them in game.
   visuals: lite
+  sound: true          # synthesised effects, M mutes in game
+  title_screen: true   # open on a title card (skipped for --auto / --loop / --headless)
 
 # ── Gameplay rules ────────────────────────────────────────────────────────────
 # Speeds are in TILES PER SECOND. The maze is 28 x 31 tiles.

@@ -30,6 +30,7 @@ from pacman_bteng.gui.layout import Layout
 from pacman_bteng.gui.hud import Hud
 from pacman_bteng.gui.input import Intent, InputHandler
 from pacman_bteng.gui.renderer import Renderer
+from pacman_bteng.gui.audio import SoundBoard
 
 __all__ = [
     "Theme",
@@ -39,4 +40,5 @@ __all__ = [
     "Intent",
     "InputHandler",
     "Renderer",
+    "SoundBoard",
 ]

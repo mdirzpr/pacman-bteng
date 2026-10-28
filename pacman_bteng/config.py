@@ -46,6 +46,11 @@ class WindowSettings:
     #: "lite" rather than failing to start: a typo in a config file should not
     #: cost you the game.
     visuals: str = "lite"
+    #: Synthesised sound effects (no audio files).  ``--mute`` / ``M`` silence them.
+    sound: bool = True
+    #: Open on a title card instead of dropping straight into READY!.  Never
+    #: shown for --auto, --loop or --headless, where nobody is there to press a key.
+    title_screen: bool = True
 
     def visual_style(self):
         """The :class:`~pacman_bteng.gui.theme.VisualStyle` this names.

@@ -132,6 +132,8 @@ Everything below is `python -m pacman_bteng --help`. Flags **win over**
 |------|---------|--------------|
 | `--fps N` | `60` | Frame-rate cap. In headless mode this is also the fixed time step (`dt = 1/fps`). Clamped to ≥ 1. |
 | `--tile PX` | `24` | Pixels per maze tile. Shrunk automatically to fit the desktop; clamped to ≥ 6. |
+| `--mute` | off | Start with sound off. Effects are synthesised at start-up (no audio files); a machine with no sound device simply plays silently. `M` toggles in game. |
+| `--no-title` | off | Skip the title card and go straight to READY!. The card is never shown for `--auto`, `--loop` or `--headless`. |
 | `--visuals lite\|deluxe` | `lite` | `lite` is clean, crisp and cheap (~1.6 ms/frame) and is also the calm option; `deluxe` adds neon bloom, particles, score popups, screen shake and CRT scanlines (~4 ms/frame). `F3` switches live. |
 | `--no-panel` | off | Hide the right-hand live behavior-tree panel (`TAB` toggles it at runtime). |
 | `--debug` | off | Draw each ghost's current target and the line to it, and print every non-pellet game event to stdout with a timestamp. |
@@ -152,7 +154,7 @@ Everything below is `python -m pacman_bteng --help`. Flags **win over**
 | `--headless` | off | SDL dummy video driver plus a fixed time step, so a smoke run is reproducible and machine-independent. The real drawing code still runs. |
 | `--max-seconds S` | `0` | Stop after this much *game* time. `0` = run until quit. Clamped to ≥ 0. |
 | `--list-nodes` | — | Print every registered BT node with its ports, then exit. Needs no display, no maze and no config file. |
-| `--version` | — | `pacman-bteng 1.0.0`. |
+| `--version` | — | `pacman-bteng 1.1.0`. |
 
 Examples straight from the CLI epilog:
 
@@ -189,8 +191,11 @@ L1 score=0 lives=3 pellets=242 mode=scatter  (301 frames, 5.0s game time, 150 fp
 | `SPACE` / `P` | Pause / resume |
 | `R` | Restart from level 1 (also resets every tree to IDLE) |
 | `TAB` | Show/hide the behavior-tree panel — the window is rebuilt at the new size |
+| `1` `2` `3` | Side-panel tab: TREES (agent cards), STATS (run numbers), LOG (recent events). The dock at the top of the panel is clickable too. |
 | `F1` | Debug overlay (ghost targets + tunnel row labels) |
 | `F2` | Toggle Pac-Man's autopilot. The tree is parsed and validated on first use, not at start-up. |
+| `ENTER` | Start the game from the title card (`SPACE` also works). |
+| `M` | Mute / unmute sound effects. |
 | `F3` | Switch between the `lite` and `deluxe` visual presets. The window is rebuilt, the game keeps going. |
 | `ESC` / `Q` | Quit |
 

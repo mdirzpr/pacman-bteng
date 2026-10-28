@@ -38,12 +38,18 @@ MAX_FRAME_DT = 0.05
 #: How long GAME OVER stays on screen before ``--loop`` deals a new game.
 GAME_OVER_LINGER = 4.0
 
+#: The card shown until the player presses ENTER.
+_TITLE_CARD = (
+    "PAC-MAN\nevery ghost runs its own BTEng behavior tree\n\n"
+    "ENTER  play        F2  watch the autopilot\nM  mute        ESC  quit"
+)
+
 #: What to write across the maze in each non-playing phase.
 _OVERLAYS = {
     GamePhase.READY: "READY!",
     GamePhase.DYING: "OUCH!",
     GamePhase.LEVEL_CLEAR: "LEVEL CLEARED",
-    GamePhase.GAME_OVER: "GAME OVER   -   press R",
+    GamePhase.GAME_OVER: "GAME OVER\npress R to play again",
 }
 
 
@@ -68,10 +74,13 @@ class PacmanApp:
         self.show_panel = settings.window.show_panel
         self.autopilot = settings.autopilot
         self.running = True
+        #: Which side-panel tab is showing.  Lives here, not on the Hud, so it
+        #: survives the renderer rebuild that TAB and F3 trigger.
+        self.panel_tab = "trees"
 
         # Imported late so the game logic and the behavior trees stay usable
         # (and testable) on a machine with no display and no pygame at all.
-        from pacman_bteng.gui import InputHandler, Layout, Renderer, Theme
+        from pacman_bteng.gui import InputHandler, Layout, Renderer, SoundBoard, Theme
 
         self.style = settings.window.visual_style()
         self.layout = Layout.compute(
@@ -89,6 +98,14 @@ class PacmanApp:
             style=self.style,
         )
         self.input = InputHandler()
+        self.sound = SoundBoard(enabled=settings.window.sound and not settings.headless)
+
+        # Only a person at a keyboard gets a title card; --auto, --loop and
+        # --headless exist to run without one.
+        self.title = (settings.window.title_screen and not settings.headless
+                      and not settings.autopilot and not settings.loop)
+        if self.title:
+            self.world.paused = True
 
         self._elapsed = 0.0
         self._frames = 0
@@ -121,6 +138,7 @@ class PacmanApp:
                     self.world,
                     self.brains.brains,
                     debug=self.debug,
+                    panel_tab=self.panel_tab,
                     overlay=self._overlay(),
                     events=events,
                 )
@@ -149,6 +167,8 @@ class PacmanApp:
             self.brains.tick_all(dt)
 
         events = world.update(dt)
+        for event in events:
+            self.sound.play(event.kind)
         self._maybe_loop(dt)
         if self.debug:
             for event in events:
@@ -177,10 +197,22 @@ class PacmanApp:
 
     def _handle_intents(self) -> None:
         from pacman_bteng.gui import Intent
+        from pacman_bteng.gui.input import INTENT_BY_TAB, TAB_BY_INTENT
 
-        for intent in self.input.poll(self.world):
+        def click(pos):
+            tab = self.renderer.hud.tab_at(pos) if self.show_panel else None
+            return INTENT_BY_TAB.get(tab) if tab else None
+
+        for intent in self.input.poll(self.world, hit_test=click):
             if intent is Intent.QUIT:
                 self.running = False
+            elif intent in TAB_BY_INTENT:
+                if self.show_panel and not self.title:
+                    self.panel_tab = TAB_BY_INTENT[intent]
+            elif self.title:
+                self._title_intent(intent)
+            elif intent is Intent.TOGGLE_MUTE:
+                self.sound.toggle_mute()
             elif intent is Intent.PAUSE:
                 self.world.paused = not self.world.paused
             elif intent is Intent.RESTART:
@@ -193,6 +225,20 @@ class PacmanApp:
                 self._toggle_autopilot()
             elif intent is Intent.TOGGLE_VISUALS:
                 self._cycle_visuals()
+
+    def _title_intent(self, intent) -> None:
+        """On the title card only a few keys mean anything."""
+        from pacman_bteng.gui import Intent
+
+        if intent in (Intent.START, Intent.PAUSE):
+            self.title = False
+            self.world.paused = False
+        elif intent is Intent.TOGGLE_AUTOPILOT:
+            self._toggle_autopilot()
+            self.title = False
+            self.world.paused = False
+        elif intent is Intent.TOGGLE_MUTE:
+            self.sound.toggle_mute()
 
     def _restart(self) -> None:
         self.world.start_level(self.settings.level, full_reset=True)
@@ -256,8 +302,10 @@ class PacmanApp:
     # ── Presentation ──────────────────────────────────────────────────────────
 
     def _overlay(self) -> str:
+        if self.title:
+            return _TITLE_CARD
         if self.world.paused:
-            return "PAUSED"
+            return "PAUSED\nSPACE to resume"
         return _OVERLAYS.get(self.world.phase, "")
 
     def _banner(self) -> None:
@@ -278,6 +326,7 @@ class PacmanApp:
     def _shutdown(self, wall_time: float) -> None:
         self.brains.shutdown()
         self.introspection.close()
+        self.sound.close()
         self.renderer.close()
         fps = self._frames / wall_time if wall_time > 0 else 0.0
         print(

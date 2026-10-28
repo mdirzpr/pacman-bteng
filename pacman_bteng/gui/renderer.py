@@ -120,6 +120,7 @@ class Renderer:
         debug: bool = False,
         overlay: str = "",
         events: Sequence[Any] = (),
+        panel_tab: str = "trees",
     ) -> None:
         """Paint and present one complete frame.
 
@@ -148,10 +149,11 @@ class Renderer:
         if self.effects is not None:
             self.effects.draw_over(surface, world)
 
+        self.hud.record(world, events)
         self.hud.draw_top_bar(surface, world)
         self.hud.draw_bottom_bar(surface, world, "")
         if self.show_panel:
-            self.hud.draw_panel(surface, world, brains)
+            self.hud.draw_panel(surface, world, brains, tab=panel_tab)
 
         if overlay:
             self._draw_overlay(surface, overlay)
@@ -511,23 +513,53 @@ class Renderer:
     # ── Centred overlay text ──────────────────────────────────────────────────
 
     def _draw_overlay(self, surface, text: str) -> None:
-        """READY! / PAUSED / GAME OVER, centred over the maze."""
+        """A centred card over the maze: READY!, PAUSED, GAME OVER, the title.
+
+        *text* is split on newlines.  The first line is the headline; every
+        later line is a smaller caption underneath it, and a blank line is a
+        gap.  One string keeps the ``overlay=`` contract between app and
+        renderer exactly as it was.
+        """
         theme = self.theme
-        rendered = self.overlay_font.render(text, True, theme.pacman)
+        lines = text.split("\n")
+        tile = self.layout.tile
+        small = self.hud.fonts.at(max(12, int(tile * 0.75)))
+
+        rows = [(self.overlay_font.render(lines[0], True, theme.pacman), 0)]
+        for line in lines[1:]:
+            if not line:
+                rows.append((None, tile // 2))
+                continue
+            rows.append((small.render(line, True, theme.text_bright), tile // 3))
+
+        width = max(r.get_width() for r, _ in rows if r is not None)
+        height = sum((r.get_height() if r is not None else 0) + gap for r, gap in rows)
+
         maze_rect = pygame.Rect(
             self.layout.maze_origin[0], self.layout.maze_origin[1],
             self.layout.maze_w, self.layout.maze_h,
         )
-        rect = rendered.get_rect(center=maze_rect.center)
+        card = pygame.Rect(0, 0, width + tile * 3, height + tile * 2)
+        card.center = maze_rect.center
 
-        # A dimmed plate behind the text: the maze underneath is busy, and pure
-        # text on top of pellets is genuinely hard to read.
-        plate = rect.inflate(self.layout.tile * 2, self.layout.tile)
-        backdrop = pygame.Surface(plate.size, pygame.SRCALPHA)
-        backdrop.fill((*theme.background, 205))
-        surface.blit(backdrop, plate.topleft)
-        pygame.draw.rect(surface, theme.panel_border, plate, 1)
-        surface.blit(rendered, rect.topleft)
+        # Dim the whole maze a little, then the card on top: the board behind
+        # is busy, and bare text over pellets is genuinely hard to read.
+        scrim = pygame.Surface(maze_rect.size, pygame.SRCALPHA)
+        scrim.fill((*theme.background, 120))
+        surface.blit(scrim, maze_rect.topleft)
+
+        backdrop = pygame.Surface(card.size, pygame.SRCALPHA)
+        pygame.draw.rect(backdrop, (*theme.panel_bg, 238), backdrop.get_rect(),
+                         border_radius=tile // 2)
+        surface.blit(backdrop, card.topleft)
+        pygame.draw.rect(surface, theme.accent, card, 2, border_radius=tile // 2)
+
+        y = card.top + tile
+        for rendered, gap in rows:
+            y += gap
+            if rendered is not None:
+                surface.blit(rendered, rendered.get_rect(midtop=(card.centerx, y)))
+                y += rendered.get_height()
 
     def __repr__(self) -> str:  # noqa: D105
         mode = "headless" if self.headless else "windowed"

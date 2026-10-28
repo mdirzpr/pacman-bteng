@@ -36,7 +36,8 @@ examples:
 in-game keys:
   arrows / WASD  move        SPACE or P  pause      R  restart
   TAB  side panel            F1  debug overlay      F2  autopilot
-  F3   lite / deluxe visuals                        ESC or Q  quit
+  F3   lite / deluxe visuals     M  mute            ESC or Q  quit
+  ENTER  start from the title screen
 
 live behavior-tree views (while a game is running):
   ./run.sh tree blinky       the tree, redrawn as it ticks
@@ -77,6 +78,10 @@ def build_parser() -> argparse.ArgumentParser:
                              "particles and scanlines. F3 toggles in game")
     window.add_argument("--no-panel", action="store_true",
                         help="hide the live behavior-tree side panel")
+    window.add_argument("--mute", action="store_true",
+                        help="start with sound off (M toggles in game)")
+    window.add_argument("--no-title", action="store_true",
+                        help="skip the title screen and start playing at once")
     window.add_argument("--debug", action="store_true",
                         help="draw each ghost's target and log game events")
 
@@ -129,6 +134,10 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         settings.window.visuals = args.visuals
     if args.no_panel:
         settings.window.show_panel = False
+    if args.mute:
+        settings.window.sound = False
+    if args.no_title:
+        settings.window.title_screen = False
 
     if args.no_zmq:
         settings.introspection.enable_zmq = False

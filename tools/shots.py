@@ -31,6 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame  # noqa: E402
 
+from pacman_bteng.app import _TITLE_CARD                 # noqa: E402
 from pacman_bteng.behaviors import BrainPool             # noqa: E402
 from pacman_bteng.config import Settings                 # noqa: E402
 from pacman_bteng.game import GameWorld, GhostState, Maze  # noqa: E402
@@ -114,6 +115,15 @@ def ghosts_frightened(world, brains) -> bool:
     )
 
 
+def ghost_closing_in(world, brains) -> bool:
+    """A hostile ghost within 4 tiles of Pac-Man: its card is fully lifted."""
+    from pacman_bteng.game.geometry import manhattan
+    return world.elapsed > 8.0 and any(
+        g.is_hostile and manhattan(g.tile, world.pacman.tile) <= 4
+        for g in world.ghosts
+    )
+
+
 #: name -> how to take it
 SHOTS = {
     "lite": dict(
@@ -127,6 +137,26 @@ SHOTS = {
     "debug": dict(
         style=VisualStyle.LITE, until=four_corners, debug=True, seed=1234, tile=24,
         caption="F1 debug overlay: four ghosts, four corners",
+    ),
+    "lift": dict(
+        style=VisualStyle.DELUXE, until=ghost_closing_in, debug=False, seed=1234,
+        tile=24, crop="panel", scale=2,
+        caption="a ghost closing in lifts its card, deluxe preset",
+    ),
+    "stats": dict(
+        style=VisualStyle.DELUXE, until=lambda world, brains: world.elapsed > 16.0,
+        debug=False, seed=1234, tile=24, crop="panel", scale=2, panel_tab="stats",
+        caption="the STATS tab of the side panel, deluxe preset",
+    ),
+    "log": dict(
+        style=VisualStyle.LITE, until=lambda world, brains: world.elapsed > 16.0,
+        debug=False, seed=1234, tile=24, crop="panel", scale=2, panel_tab="log",
+        caption="the LOG tab of the side panel, lite preset",
+    ),
+    "title": dict(
+        style=VisualStyle.DELUXE, until=lambda world, brains: world.elapsed > 1.0,
+        debug=False, seed=1234, tile=24, overlay=_TITLE_CARD,
+        caption="the title card, deluxe preset",
     ),
     "panel": dict(
         style=VisualStyle.DELUXE, until=the_hunt, debug=False, seed=1234, tile=24,
@@ -176,7 +206,9 @@ def _run_until(world, brains, renderer, spec) -> int:
     for frame in range(limit):
         brains.tick_all(DT)
         events = world.update(DT)
-        renderer.draw(world, brains.brains, debug=spec["debug"], events=events)
+        renderer.draw(world, brains.brains, debug=spec["debug"], events=events,
+                      overlay=spec.get("overlay", ""),
+                      panel_tab=spec.get("panel_tab", "trees"))
         if until(world, brains.brains):
             return frame
     raise SystemExit(

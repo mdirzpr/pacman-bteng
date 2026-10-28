@@ -15,7 +15,7 @@ The handler deliberately does two different jobs and keeps them apart:
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List
+from typing import Callable, Dict, List, Optional, Tuple
 
 import pygame
 
@@ -33,6 +33,21 @@ class Intent(Enum):
     TOGGLE_PANEL = "toggle_panel"
     TOGGLE_AUTOPILOT = "toggle_autopilot"
     TOGGLE_VISUALS = "toggle_visuals"
+    TOGGLE_MUTE = "toggle_mute"
+    START = "start"
+    TAB_TREES = "tab_trees"
+    TAB_STATS = "tab_stats"
+    TAB_LOG = "tab_log"
+
+
+#: Side-panel tab each tab intent selects.  The names are the ones the HUD's
+#: dock draws, so the app can hand the string straight to the renderer.
+TAB_BY_INTENT: Dict[Intent, str] = {
+    Intent.TAB_TREES: "trees",
+    Intent.TAB_STATS: "stats",
+    Intent.TAB_LOG: "log",
+}
+INTENT_BY_TAB: Dict[str, Intent] = {tab: i for i, tab in TAB_BY_INTENT.items()}
 
 
 # ── Key maps ──────────────────────────────────────────────────────────────────
@@ -60,12 +75,18 @@ _INTENT_KEYS: Dict[int, Intent] = {
     pygame.K_F1: Intent.TOGGLE_DEBUG,
     pygame.K_F2: Intent.TOGGLE_AUTOPILOT,
     pygame.K_F3: Intent.TOGGLE_VISUALS,
+    pygame.K_m: Intent.TOGGLE_MUTE,
+    pygame.K_1: Intent.TAB_TREES,
+    pygame.K_2: Intent.TAB_STATS,
+    pygame.K_3: Intent.TAB_LOG,
+    pygame.K_RETURN: Intent.START,
+    pygame.K_KP_ENTER: Intent.START,
 }
 
 #: One line, shown in the bottom bar.  Kept here next to the key maps so the
 #: hint can never drift away from what the keys actually do.
 KEY_HINT = ("ARROWS/WASD move   SPACE pause   R restart   TAB panel   "
-            "F1 debug   F2 auto   F3 visuals   ESC quit")
+            "F1 debug   F2 auto   F3 visuals   1-3 tabs   M mute   ESC quit")
 
 
 class InputHandler:
@@ -76,18 +97,31 @@ class InputHandler:
         #: the authoritative copy lives on ``world.pacman``.
         self.last_request: Direction = Direction.NONE
 
-    def poll(self, world: GameWorld) -> List[Intent]:
+    def poll(
+        self,
+        world: GameWorld,
+        hit_test: Optional[Callable[[Tuple[int, int]], Optional[Intent]]] = None,
+    ) -> List[Intent]:
         """Consume every pending event; return the non-movement intents.
 
         Movement keys are applied to *world* as a side effect.  The intent list
         preserves press order and may contain duplicates — the app is free to
         collapse them, but two quick pause taps really were two taps.
+
+        *hit_test* maps a left-click position to an intent (or ``None``); it is
+        how the side panel's tab dock is clickable without this module knowing
+        where the dock is.
         """
         intents: List[Intent] = []
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 intents.append(Intent.QUIT)
+                continue
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                hit = hit_test(event.pos) if hit_test is not None else None
+                if hit is not None:
+                    intents.append(hit)
                 continue
             if event.type != pygame.KEYDOWN:
                 continue
