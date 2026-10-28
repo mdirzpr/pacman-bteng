@@ -203,6 +203,7 @@ string, and the node code casts every port through `as_float` / `as_int` /
 | | `hostile_only` | `"true"` | Ignore edible and eaten ghosts — "am I in danger". |
 | | `edible_only` | `"false"` | Only count ghosts that can be eaten — "is there a meal nearby". Checked first, so it wins over `hostile_only`. |
 | | `metric` | `"euclidean"` | `euclidean`, `manhattan` or `path`. |
+| | `hysteresis` | `0.0` | Once the guard fires it holds until the ghost is `distance + hysteresis` tiles away. Stops a ghost hovering at the edge from flipping the branch every tile. |
 
 Both proximity conditions share one distance metric port:
 
@@ -250,7 +251,8 @@ are the extra ones.
 |------|------|---------|--------------|
 | `SetNearestPelletTarget` | `candidates` | `10.0` | Ranks this many nearest pellets by straight-line distance, then measures each with a BFS and picks the shortest *corridor* path. Straight-line nearest is wrong often enough to matter: the pellet across the wall is two tiles away and thirty tiles of walking. |
 | `SetHuntGhostTarget` | — | — | Aims at the nearest edible ghost; FAILURE when nothing is edible. |
-| `SetEscapeTarget` | `openness` | `0.6` | Scores each neighbouring tile as `distance to the closest hostile ghost + openness × number of exits`, and aims at the best. *All* hostile ghosts count — running from Blinky into Pinky is not an escape — and the exit bonus is what makes Pac-Man break for open ground instead of into a pocket. `openness="0"` gives the naive "straight away from him" behavior back, and he dies in corners. |
+| `SetEscapeTarget` | `reverse_penalty` | `0.0` | Tiles of safety a U-turn must beat to win. With a ghost on each side two tiles score almost alike and the choice flips as they move; a small penalty (the autopilot uses `1.5`) keeps him going. |
+| | `openness` | `0.6` | Scores each neighbouring tile as `distance to the closest hostile ghost + openness × number of exits`, and aims at the best. *All* hostile ghosts count — running from Blinky into Pinky is not an escape — and the exit bonus is what makes Pac-Man break for open ground instead of into a pocket. `openness="0"` gives the naive "straight away from him" behavior back, and he dies in corners. |
 
 ### 3.3 Movers
 

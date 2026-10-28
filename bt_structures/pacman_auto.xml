@@ -38,6 +38,7 @@
       <Sequence name="Pacman/Hunt">
         <IsPowerActive name="Pacman/PowerBurning"/>
         <IsGhostWithin name="Pacman/PreyNearby" distance="14" metric="path"
+                       hysteresis="3"
                        hostile_only="false" edible_only="true"/>
         <SetHuntGhostTarget name="Pacman/AimAtPrey"
                             target_x="{target_x}" target_y="{target_y}"/>
@@ -52,8 +53,9 @@
               ghost. -->
       <Sequence name="Pacman/Evade">
         <IsGhostWithin name="Pacman/ThreatNearby" distance="7" metric="path"
+                       hysteresis="3"
                        hostile_only="true"/>
-        <SetEscapeTarget name="Pacman/AimAway" openness="0.6"
+        <SetEscapeTarget name="Pacman/AimAway" openness="0.6" reverse_penalty="1.5"
                          target_x="{target_x}" target_y="{target_y}"/>
         <StepTowardTarget name="Pacman/StepAway"
                           target_x="{target_x}" target_y="{target_y}"
@@ -86,6 +88,7 @@
       <input_port name="hostile_only"/>
       <input_port name="edible_only"/>
       <input_port name="metric"/>
+      <input_port name="hysteresis"/>
     </Condition>
 
     <Condition ID="HasPelletsLeft"/>
@@ -99,6 +102,7 @@
       <output_port name="target_x"/>
       <output_port name="target_y"/>
       <input_port name="openness"/>
+      <input_port name="reverse_penalty"/>
     </Action>
 
     <Action ID="SetNearestPelletTarget">

@@ -577,3 +577,51 @@ def sealed_world(tmp_path):
     ghost = world.ghost("blinky")
     ghost.state = GhostState.NORMAL
     return world, ghost
+
+
+# ── Autopilot does not pace back and forth ───────────────────────────────────
+
+def _autopilot_run(seconds, seed=1):
+    from pacman_bteng.behaviors import BrainPool
+    from pacman_bteng.game import GameWorld, Maze
+    from pacman_bteng.game.geometry import Direction
+    from pacman_bteng.config import Settings
+
+    settings = Settings.load()
+    settings.autopilot = True
+    settings.introspection.enable_zmq = False
+    world = GameWorld(Maze.from_file(settings.maze_file), settings.rules, seed=seed)
+    pool = BrainPool(world, settings)
+    seen, last = [], None
+    for _ in range(int(seconds * 60)):
+        pool.tick_all(1 / 60)
+        world.update(1 / 60)
+        d = world.pacman.direction
+        if d is not Direction.NONE and (world.pacman.tile, d) != last:
+            last = (world.pacman.tile, d)
+            seen.append(d)
+    return seen
+
+
+def test_autopilot_rarely_reverses():
+    """Regression: acting on a one-tile-old target made him U-turn ~1 time in 3."""
+    seen = _autopilot_run(30)
+    reversals = sum(a is b.opposite for a, b in zip(seen, seen[1:]))
+    assert len(seen) > 100
+    assert reversals / len(seen) < 0.15
+
+
+def test_cycle_restart_happens_in_the_same_tick(world, settings):
+    from pacman_bteng.behaviors import BrainPool
+    pool = BrainPool(world, settings)
+    brain = pool.brains[0]
+    for _ in range(600):
+        before = brain.cycles
+        brain.tick()
+        world.update(1 / 60)
+        if brain.cycles > before:
+            # A cycle just finished and its successor already ran this tick.
+            assert brain.status.value in ("RUNNING", "FAILURE", "SUCCESS")
+            return
+    raise AssertionError("no cycle ever completed")
+

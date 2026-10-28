@@ -119,10 +119,28 @@ class AgentBrain:
         self._read_active_path()
 
         if self.status is not NodeStatus.RUNNING:
-            # One cycle = one tile decided. Reset to IDLE so the next frame
-            # re-evaluates the whole tree from the top.
+            # One cycle = one tile decided. Reset to IDLE and start the next
+            # cycle in the SAME frame, not the next one.
+            #
+            # The tile is reached in world.update(), so this is the first tick
+            # that can see it.  Waiting a frame lets the world move Pac-Man on
+            # first (it keeps him going straight at an undecided tile centre),
+            # and the new cycle would then pick its target mid-tile and act on
+            # it one tile late: standing on the pellet it had aimed at, the
+            # BFS finds no path, falls back to a greedy step and turns him
+            # round.  Ghosts lost a frame of travel per tile the same way.
             self.executor.reset_tree()
             self.cycles += 1
+            finished = self.status
+            K.sync(self.blackboard, self.agent, self.world)
+            self.status = self.executor.tick_once()
+            self._read_active_path()
+            if self.status is not NodeStatus.RUNNING:
+                # Failed straight away (boxed in, blocked): leave it reset for
+                # the next frame rather than spinning here.
+                self.executor.reset_tree()
+                self.cycles += 1
+            return self.status if self.status is NodeStatus.RUNNING else finished
 
         return self.status
 

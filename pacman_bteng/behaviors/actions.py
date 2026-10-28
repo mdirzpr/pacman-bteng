@@ -356,6 +356,7 @@ class SetEscapeTarget(TargetSelector):
         return [
             *super().provided_ports(),
             InputPort("openness", "Tiles of safety one extra exit is worth", default=0.6),
+            InputPort("reverse_penalty", "Tiles of safety a U-turn must beat to win", default=0.0),
         ]
 
     def choose(self) -> Optional[Tile]:
@@ -368,6 +369,12 @@ class SetEscapeTarget(TargetSelector):
 
         passable = self.passable()
         openness = as_float(self.get_input("openness", 0.6), 0.6)
+        # Momentum: two neighbours that score nearly alike (a ghost on each
+        # side) flip with every tile the ghosts move, and the agent paces
+        # back and forth between them.  Charging a U-turn a few tiles of
+        # safety keeps him going unless turning round is clearly better.
+        reverse_penalty = as_float(self.get_input("reverse_penalty", 0.0), 0.0)
+        behind = self.agent.last_direction.opposite
 
         # One distance field per threat, then every candidate tile is a lookup.
         # Corridor distance, not straight line: the whole point is to tell
@@ -384,6 +391,8 @@ class SetEscapeTarget(TargetSelector):
             safety = min(float(field.get(tile, 99.0)) for field in fields)
             exits = len(legal_moves(tile, passable, wrap=self.wrap))
             score = safety + openness * exits
+            if direction is behind:
+                score -= reverse_penalty
             if score > best_score:
                 best, best_score = tile, score
 

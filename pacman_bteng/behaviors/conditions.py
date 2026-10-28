@@ -185,10 +185,18 @@ class IsGhostWithin(_ProximityCondition):
             InputPort("hostile_only", "Ignore edible and eaten ghosts", default="true"),
             InputPort("edible_only", "Only count ghosts that can be eaten", default="false"),
             InputPort("metric", "euclidean | manhattan | path", default="euclidean"),
+            InputPort("hysteresis", "Extra tiles a firing guard keeps holding for", default=0.0),
         ]
+
+    def __init__(self, name: str, config=None) -> None:
+        super().__init__(name, config)
+        # Whether the last tick said yes.  Survives reset_tree() on purpose:
+        # remembering that we were already alarmed is the whole point.
+        self._latched = False
 
     def tick(self) -> NodeStatus:
         radius = as_float(self.get_input("distance", 6.0), 6.0)
+        hysteresis = max(0.0, as_float(self.get_input("hysteresis", 0.0), 0.0))
         hostile_only = as_bool(self.get_input("hostile_only", "true"), True)
         edible_only = as_bool(self.get_input("edible_only", "false"), False)
         metric = str(self.get_input("metric", "euclidean")).lower()
@@ -203,13 +211,21 @@ class IsGhostWithin(_ProximityCondition):
             pool = list(world.ghosts)
 
         if not pool:
+            self._latched = False
             return self.verdict(False, "no ghost of that kind on the board")
 
         # One field, every ghost measured against it — see _measure.
         field = self._field(metric)
         nearest = min(pool, key=lambda g: self._measure(metric, here, g.tile, field))
         distance = self._measure(metric, here, nearest.tile, field)
+
+        # Schmitt trigger: fire inside `radius`, but once firing hold until the
+        # ghost is `radius + hysteresis` away.  A single threshold flips every
+        # tile for a ghost hovering at the edge, and a guard that flips makes
+        # the branch below it turn the agent round and back again.
+        limit = radius + hysteresis if self._latched else radius
+        self._latched = distance <= limit
         return self.verdict(
-            distance <= radius,
-            f"{nearest.name} {distance:.1f} tiles (limit {radius:g}, {metric})",
+            self._latched,
+            f"{nearest.name} {distance:.1f} tiles (limit {limit:g}, {metric})",
         )

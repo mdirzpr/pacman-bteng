@@ -116,7 +116,10 @@ to `last_direction` when the turn is into a wall.
 
 BTEng has no `Repeat` decorator and a tree that returns a terminal status is
 finished, so `AgentBrain.tick()` calls `executor.reset_tree()` on any
-non-RUNNING result and keeps ticking. **One completed tree = one tile of travel
+non-RUNNING result and starts the next cycle **in the same tick** (the tile is
+reached inside `world.update()`, so this is the first tick that sees it;
+waiting a frame lets the world walk Pac-Man on first, and the tree then acts on
+a target chosen one tile late). **One completed tree = one tile of travel
 decided.** The XML root is a bare `<ReactiveFallback>`; there is no wrapper.
 
 Executor is manual: `ExecutorConfig(tick_interval=0.0, halt_on_completion=False,
