@@ -72,7 +72,7 @@ Gotcha found while doing it: `pygame.draw.line` on an `SRCALPHA` surface *overwr
 - One rounded pill, three segments. The active tab is a filled accent segment with dark text; the others are dim text. The current view is a shape, not only a colour.
 - Views: **TREES** (the agent cards, unchanged), **STATS** (six glass tiles plus a board-cleared meter), **LOG** (newest game event first; pellets are skipped because there are hundreds per level).
 - Keys `1` `2` `3`, or click the dock. The click goes through `InputHandler.poll(hit_test=...)`, so `input.py` never learns where the dock is.
-- The selected tab lives on `PacmanApp.panel_tab`, not on the Hud, so it survives the renderer rebuild that TAB and F3 cause. The LOG history and sparkline history do not survive it.
+- The selected tab lives on `PacmanApp.panel_tab`, not on the Hud, so it survives the renderer rebuild that TAB and F3 cause. The LOG and sparkline history survive it too (see below).
 - The footer (phase, mode, pellets, elapsed) is shown on every tab.
 - The glass tile from `_glass()` is reused for the STATS tiles, so a new view costs no new styling.
 
@@ -109,6 +109,15 @@ Gotcha found while doing it: `pygame.draw.line` on an `SRCALPHA` surface *overwr
 - It sits before the sparkline, which takes whatever room remains and is the first thing dropped in a narrow window.
 - The STATS tab keeps its linear BOARD CLEARED bar; that is progress made, the ring is work remaining.
 
+### History across renderer rebuilds
+
+`HudHistory` (in `hud.py`), owned by `PacmanApp.hud_history` and passed to every `Renderer`, which passes it to its `Hud`.
+
+- TAB and F3 build a new Renderer and Hud. State that must outlive them lives in a small pure-data object owned by the app, the same reason `panel_tab` lives there.
+- It holds the sparkline samples and the LOG events. The Hud aliases the lists, so the drawing code is unchanged.
+- A `Hud` built with no history makes its own, so tools and tests that construct one directly still work.
+- Anything else the HUD should remember across rebuilds goes in `HudHistory`, not on the Hud.
+
 ## Guidelines to reuse
 
 **Surfaces**
@@ -143,4 +152,4 @@ Gotcha found while doing it: `pygame.draw.line` on an `SRCALPHA` surface *overwr
 
 ## Suggested next steps (not done)
 
-1. Keep the LOG and sparkline history across the renderer rebuild (move it to the app, as `panel_tab` is).
+None queued. Ideas if you want more: a short fade when the panel is hidden or shown, a click target on each agent card to pin its tree in the TREES tab.

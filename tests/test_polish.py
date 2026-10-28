@@ -194,3 +194,28 @@ def test_pellet_ring_tracks_pellets_left_and_survives_a_small_window(world):
             surface.fill((0, 0, 0))
             x = hud._pellet_ring(surface, world, bar, bar.centery, 10)
             assert x > 10                      # always reports where it ended
+
+
+def test_history_survives_a_hud_rebuild(world):
+    import pygame
+    from pacman_bteng.game.world import GameEvent
+    from pacman_bteng.gui import Layout
+    from pacman_bteng.gui.hud import Hud, HudHistory
+    from pacman_bteng.gui.theme import Theme, VisualStyle
+
+    layout = Layout.compute(world.maze, 24, show_panel=True)
+    history = HudHistory()
+    first = Hud(layout, Theme.default(), history)
+    for step in range(6):
+        world.elapsed, world.score = float(step), step * 10
+        first._sample_score(world)
+    first.record(world, [GameEvent("power", "POWER!")])
+
+    # What TAB / F3 do: a brand-new Hud (here with another theme) on the same history.
+    second = Hud(layout, Theme.for_style(VisualStyle.DELUXE), history)
+    assert len(second._score_marks) == 6
+    assert [e[2] for e in second._log] == ["POWER!"]
+    world.elapsed += 1.0
+    second._sample_score(world)                       # and it keeps recording
+    assert len(history.score_marks) == 7
+    assert Hud(layout, Theme.default())._log is not history.log   # no history: private

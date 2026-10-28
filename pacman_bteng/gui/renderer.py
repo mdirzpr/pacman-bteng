@@ -65,6 +65,7 @@ class Renderer:
         caption: str = "Pac-Man · BTEng",
         headless: bool = False,
         style: Optional["VisualStyle"] = None,
+        history: Optional[Any] = None,
     ) -> None:
         self.layout = layout
         self.theme = theme
@@ -83,7 +84,7 @@ class Renderer:
         if not headless:
             pygame.display.set_caption(caption)
 
-        self.hud = Hud(layout, theme)
+        self.hud = Hud(layout, theme, history)
         self.overlay_font = self.hud.fonts.at(max(28, int(layout.tile * 2.0)))
         self._closed = False
 

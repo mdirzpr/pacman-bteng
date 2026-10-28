@@ -188,22 +188,40 @@ class TextCache:
         return x
 
 
+class HudHistory:
+    """What the HUD remembers between frames, owned by whoever outlives it.
+
+    The score sparkline's samples and the LOG tab's events.  They live in their
+    own object so the app can keep one and hand it to every new Renderer: TAB
+    and F3 rebuild the renderer (and with it the Hud), and without this the
+    graph and the log would empty themselves each time.  Pure data, no pygame.
+    """
+
+    def __init__(self) -> None:
+        self.score_marks: List[int] = []
+        self.score_clock = 0.0
+        self.log: "deque[Tuple[float, str, str]]" = deque(maxlen=LOG_KEEP)
+        self.log_clock = 0.0
+
+
 class Hud:
     """Draws the two bars and the behavior-tree panel onto a surface."""
 
-    def __init__(self, layout: Layout, theme: Theme) -> None:
+    def __init__(
+        self, layout: Layout, theme: Theme, history: Optional[HudHistory] = None
+    ) -> None:
         self.layout = layout
         self.theme = theme
+        self.history = history if history is not None else HudHistory()
         self.fonts = FontBook()
         self.text = TextCache()
         self._glass_cache: Dict[Tuple[int, int, Colour], pygame.Surface] = {}
         # Score history for the sparkline.  Draw-layer state only: the game and
         # behavior layers know nothing about it, and a restart clears it.
-        self._score_marks: List[int] = []
-        self._score_clock = 0.0
-        # LOG tab history, and the dock's hit boxes (valid after a draw).
-        self._log: "deque[Tuple[float, str, str]]" = deque(maxlen=LOG_KEEP)
-        self._log_clock = 0.0
+        self._score_marks = self.history.score_marks
+        self._log = self.history.log
+        # LOG tab and sparkline history are shared lists (see HudHistory); the
+        # dock's hit boxes are only valid after a draw, so they stay here.
         self._tab_rects: Dict[str, pygame.Rect] = {}
         # Per-card lift, 0..1, and the clock it is eased against.
         self._shown_tab: Optional[str] = None
@@ -433,11 +451,11 @@ class Hud:
         freezes the graph instead of filling it with a flat line.  A restart
         sends ``elapsed`` backwards, which is the cue to start over.
         """
-        if world.elapsed < self._score_clock:
+        if world.elapsed < self.history.score_clock:
             self._score_marks.clear()
-            self._score_clock = 0.0
-        if not self._score_marks or world.elapsed - self._score_clock >= SPARK_INTERVAL:
-            self._score_clock = world.elapsed
+            self.history.score_clock = 0.0
+        if not self._score_marks or world.elapsed - self.history.score_clock >= SPARK_INTERVAL:
+            self.history.score_clock = world.elapsed
             self._score_marks.append(world.score)
             del self._score_marks[:-(SPARK_SAMPLES + 1)]
 
@@ -766,9 +784,9 @@ class Hud:
         per level would bury everything else).  ``elapsed`` going backwards
         means a restart, which starts a clean log.
         """
-        if world.elapsed < self._log_clock:
+        if world.elapsed < self.history.log_clock:
             self._log.clear()
-        self._log_clock = world.elapsed
+        self.history.log_clock = world.elapsed
         for event in events:
             if event.kind in LOG_SKIP:
                 continue

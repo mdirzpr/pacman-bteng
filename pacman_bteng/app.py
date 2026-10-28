@@ -80,7 +80,9 @@ class PacmanApp:
 
         # Imported late so the game logic and the behavior trees stay usable
         # (and testable) on a machine with no display and no pygame at all.
-        from pacman_bteng.gui import InputHandler, Layout, Renderer, SoundBoard, Theme
+        from pacman_bteng.gui import (
+            HudHistory, InputHandler, Layout, Renderer, SoundBoard, Theme,
+        )
 
         self.style = settings.window.visual_style()
         self.layout = Layout.compute(
@@ -89,6 +91,9 @@ class PacmanApp:
             show_panel=self.show_panel,
             max_size=_screen_limit(settings),
         )
+        #: Sparkline and LOG history, handed to every Renderer so a TAB / F3
+        #: rebuild does not empty them.
+        self.hud_history = HudHistory()
         self.renderer = Renderer(
             self.layout,
             Theme.for_style(self.style),
@@ -96,6 +101,7 @@ class PacmanApp:
             caption=settings.window.caption,
             headless=settings.headless,
             style=self.style,
+            history=self.hud_history,
         )
         self.input = InputHandler()
         self.sound = SoundBoard(enabled=settings.window.sound and not settings.headless)
@@ -273,6 +279,7 @@ class PacmanApp:
             caption=self.settings.window.caption,
             headless=self.settings.headless,
             style=self.style,
+            history=self.hud_history,
         )
 
     def _cycle_visuals(self) -> None:

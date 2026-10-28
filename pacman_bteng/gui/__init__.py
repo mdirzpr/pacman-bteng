@@ -27,7 +27,7 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 from pacman_bteng.gui.theme import Theme, VisualStyle
 from pacman_bteng.gui.layout import Layout
-from pacman_bteng.gui.hud import Hud
+from pacman_bteng.gui.hud import Hud, HudHistory
 from pacman_bteng.gui.input import Intent, InputHandler
 from pacman_bteng.gui.renderer import Renderer
 from pacman_bteng.gui.audio import SoundBoard
@@ -37,6 +37,7 @@ __all__ = [
     "VisualStyle",
     "Layout",
     "Hud",
+    "HudHistory",
     "Intent",
     "InputHandler",
     "Renderer",
